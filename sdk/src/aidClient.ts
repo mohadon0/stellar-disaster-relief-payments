@@ -12,7 +12,11 @@ import {
   EmergencyFund, 
   DisbursementRecord, 
   DeploymentOptions,
-  NetworkConfig 
+  NetworkConfig,
+  FundCreatedEvent,
+  FundDisbursedEvent,
+  TriggerActivatedEvent,
+  FundLifecycleEvent,
 } from './types';
 
 export class AidClient {
@@ -345,6 +349,40 @@ export class AidClient {
         return Networks.STANDALONE;
       default:
         throw new Error('Unsupported network');
+    }
+  }
+
+  /**
+   * Parse a raw Soroban contract event into a typed FundLifecycleEvent.
+   * The `event` argument is the object returned in the `events` array of a
+   * getTransaction / simulateTransaction response.
+   */
+  parseFundLifecycleEvent(event: { topic: unknown[]; value: unknown }): FundLifecycleEvent | null {
+    try {
+      const topics = event.topic.map((t) => scValToNative(t as Parameters<typeof scValToNative>[0]));
+      const data = scValToNative(event.value as Parameters<typeof scValToNative>[0]) as unknown[];
+
+      const eventType = topics[0] as string;
+      const fundId = topics[1] as string;
+
+      if (eventType === 'fund_created') {
+        const [admin, totalAmount, disasterType, geographicScope, expiresAt] = data as [string, string, string, string, number];
+        return { type: 'fund_created', fundId, admin, totalAmount, disasterType, geographicScope, expiresAt } satisfies FundCreatedEvent;
+      }
+
+      if (eventType === 'fund_disbursed') {
+        const [beneficiary, amount, purpose, approvers] = data as [string, string, string, string[]];
+        return { type: 'fund_disbursed', fundId, beneficiary, amount, purpose, approvers } satisfies FundDisbursedEvent;
+      }
+
+      if (eventType === 'trigger_activated') {
+        const [triggerId, triggerType, releaseAmount, triggerCount] = data as [string, string, string, number];
+        return { type: 'trigger_activated', fundId, triggerId, triggerType, releaseAmount, triggerCount } satisfies TriggerActivatedEvent;
+      }
+
+      return null;
+    } catch {
+      return null;
     }
   }
 }

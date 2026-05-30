@@ -380,3 +380,35 @@ export interface PaperBackupCode {
   createdAt: number;
   instructions: string;
 }
+
+// Fund Lifecycle Events
+
+export interface FundCreatedEvent {
+  type: 'fund_created';
+  fundId: string;
+  admin: string;
+  totalAmount: string;
+  disasterType: string;
+  geographicScope: string;
+  expiresAt: number;
+}
+
+export interface FundDisbursedEvent {
+  type: 'fund_disbursed';
+  fundId: string;
+  beneficiary: string;
+  amount: string;
+  purpose: string;
+  approvers: string[];
+}
+
+export interface TriggerActivatedEvent {
+  type: 'trigger_activated';
+  fundId: string;
+  triggerId: string;
+  triggerType: string;
+  releaseAmount: string;
+  triggerCount: number;
+}
+
+export type FundLifecycleEvent = FundCreatedEvent | FundDisbursedEvent | TriggerActivatedEvent;
